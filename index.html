@@ -4,133 +4,160 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Finance & Debt Planner</title>
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client -->
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js สำหรับทำกราฟ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
     <div class="max-w-2xl mx-auto space-y-6">
-      <!-- Header -->
-      <header class="text-center">
-        <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">
-          💰 Financial & Debt Planner
-        </h1>
-        <p class="text-sm text-slate-400 mt-1">
-          บันทึกรายรับ รายจ่าย และหนี้ค้างตัวเอง
-        </p>
-      </header>
-
-      <!-- Summary Cards -->
-      <div class="grid grid-cols-2 gap-4">
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400">ยอดเงินคงเหลือคำนวณ</span>
-          <div
-            id="netBalance"
-            class="text-xl md:text-2xl font-bold text-emerald-400 mt-1"
-          >
-            ฿0
-          </div>
-        </div>
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <span class="text-xs text-slate-400">ยอดติดหนี้เงินเก็บตัวเอง</span>
-          <div
-            id="totalDebt"
-            class="text-xl md:text-2xl font-bold text-rose-400 mt-1"
-          >
-            ฿0
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Forecast: เครื่องคำนวณ OT & เงินเดือนล่วงหน้า -->
+      <!-- 1. ส่วนล็อกอิน (แสดงเมื่อยังไม่ได้ Login) -->
       <div
-        class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3"
+        id="authSection"
+        class="bg-slate-800 p-6 rounded-2xl border border-slate-700 space-y-4 shadow-xl"
       >
-        <h2 class="text-sm font-semibold text-sky-300">
-          ⚡ คำนวณรายได้ล่วงหน้า (เงินเดือน + OT)
+        <h2 class="text-xl font-bold text-center text-emerald-400">
+          🔐 เข้าสู่ระบบ (เฉพาะเรา 2 คน)
         </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input
-            type="number"
-            id="baseSalary"
-            placeholder="เงินเดือนฐาน (฿)"
-            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:border-sky-500"
-          />
-          <input
-            type="number"
-            id="otHours"
-            placeholder="จำนวนชั่วโมง OT"
-            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:border-sky-500"
-          />
-          <input
-            type="number"
-            id="otRate"
-            placeholder="เรท OT ต่อ ชม. (฿)"
-            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:border-sky-500"
-          />
-        </div>
-        <div
-          class="flex justify-between items-center pt-2 border-t border-slate-700/60"
-        >
-          <span class="text-xs text-slate-400"
-            >ประมาณการเงินเดือน + OT สิ้นเดือน:</span
+        <form id="loginForm" class="space-y-3">
+          <div>
+            <label class="text-xs text-slate-400">อีเมล</label>
+            <input
+              type="email"
+              id="loginEmail"
+              required
+              placeholder="your-email@example.com"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400">รหัสผ่าน</label>
+            <input
+              type="password"
+              id="loginPassword"
+              required
+              placeholder="••••••••"
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm mt-1 focus:outline-none focus:border-emerald-500"
+            />
+          </div>
+          <button
+            type="submit"
+            id="btnLogin"
+            class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-2.5 rounded-lg text-sm transition"
           >
-          <span id="forecastResult" class="font-bold text-sky-400">฿0</span>
-        </div>
+            เข้าสู่ระบบ
+          </button>
+          <p
+            id="authError"
+            class="text-xs text-rose-400 text-center hidden"
+          ></p>
+        </form>
       </div>
 
-      <!-- Form บันทึกรายการ -->
-      <form
-        id="txForm"
-        class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4"
-      >
-        <h2 class="text-base font-semibold">➕ บันทึกรายการใหม่</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <select
-            id="txType"
-            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
-          >
-            <option value="expense">🔴 รายจ่าย</option>
-            <option value="income">🟢 รายรับ (เงินเดือน/โบนัส)</option>
-            <option value="self_debt">🟡 หนี้ตัวเอง (ยืมเงินเก็บ)</option>
-          </select>
-          <input
-            type="text"
-            id="txTitle"
-            placeholder="ชื่อรายการ (เช่น ค่าน้ำมัน, โบนัส)"
-            required
-            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
-          />
-          <input
-            type="number"
-            id="txAmount"
-            placeholder="จำนวนเงิน (฿)"
-            required
-            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
-          />
-        </div>
-        <button
-          type="submit"
-          class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-2.5 rounded-lg text-sm transition"
+      <!-- 2. ส่วนหน้าแอปหลัก (ซ่อนไว้ก่อนจนกว่าจะ Login ผ่าน) -->
+      <div id="appSection" class="space-y-6 hidden">
+        <!-- Header + Logout -->
+        <header
+          class="flex justify-between items-center bg-slate-800/60 p-4 rounded-xl border border-slate-700"
         >
-          บันทึกข้อมูล
-        </button>
-      </form>
+          <div>
+            <h1 class="text-lg md:text-xl font-bold text-emerald-400">
+              💰 Financial & Debt Planner
+            </h1>
+            <span id="userBadge" class="text-xs text-slate-400"></span>
+          </div>
+          <button
+            id="btnLogout"
+            class="text-xs bg-slate-700 hover:bg-rose-500/20 hover:text-rose-400 px-3 py-1.5 rounded-lg border border-slate-600 transition"
+          >
+            ออกจากระบบ
+          </button>
+        </header>
 
-      <!-- รายการย้อนหลัง -->
-      <div
-        class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3"
-      >
-        <h2 class="text-base font-semibold">📋 รายการล่าสุด</h2>
-        <div id="txList" class="space-y-2 text-sm">
-          <div class="text-center text-slate-500 py-4">กำลังโหลดข้อมูล...</div>
+        <!-- สรุปยอดเงิน -->
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <span class="text-xs text-slate-400">ยอดเงินคงเหลือคำนวณ</span>
+            <div
+              id="netBalance"
+              class="text-xl md:text-2xl font-bold text-emerald-400 mt-1"
+            >
+              ฿0
+            </div>
+          </div>
+          <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+            <span class="text-xs text-slate-400">ยอดติดหนี้เงินเก็บตัวเอง</span>
+            <div
+              id="totalDebt"
+              class="text-xl md:text-2xl font-bold text-rose-400 mt-1"
+            >
+              ฿0
+            </div>
+          </div>
+        </div>
+
+        <!-- กราฟสรุปสัดส่วน (Chart.js) -->
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <h2 class="text-sm font-semibold text-slate-300 mb-3">
+            📊 สรุปสัดส่วนการเงิน
+          </h2>
+          <div class="h-56 flex justify-center">
+            <canvas id="financeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- ฟอร์มบันทึกรายการ -->
+        <form
+          id="txForm"
+          class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4"
+        >
+          <h2 class="text-base font-semibold">➕ บันทึกรายการใหม่</h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <select
+              id="txType"
+              class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+            >
+              <option value="expense">🔴 รายจ่าย</option>
+              <option value="income">🟢 รายรับ (เงินเดือน/โบนัส/OT)</option>
+              <option value="self_debt">🟡 หนี้ตัวเอง (ยืมเงินเก็บ)</option>
+            </select>
+            <input
+              type="text"
+              id="txTitle"
+              placeholder="ชื่อรายการ (เช่น ค่าน้ำมัน, โบนัส)"
+              required
+              class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+            />
+            <input
+              type="number"
+              id="txAmount"
+              placeholder="จำนวนเงิน (฿)"
+              required
+              class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-2.5 rounded-lg text-sm transition"
+          >
+            บันทึกข้อมูล
+          </button>
+        </form>
+
+        <!-- รายการย้อนหลัง -->
+        <div
+          class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3"
+        >
+          <h2 class="text-base font-semibold">📋 รายการล่าสุด</h2>
+          <div id="txList" class="space-y-2 text-sm"></div>
         </div>
       </div>
     </div>
 
     <script>
-      // ⚙️ นำค่าจาก Supabase มาใส่ตรงนี้
+      // ⚙️ นำค่าจาก Supabase Project ของคุณมาใส่ตรงนี้
       const SUPABASE_URL = "https://osewhzluebkmpvhppvwy.supabase.co/rest/v1/";
       const SUPABASE_ANON_KEY =
         "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O";
@@ -139,37 +166,105 @@
         SUPABASE_ANON_KEY,
       );
 
-      // คำนวณ OT ล่วงหน้าแบบ Realtime
-      const baseSalary = document.getElementById("baseSalary");
-      const otHours = document.getElementById("otHours");
-      const otRate = document.getElementById("otRate");
-      const forecastResult = document.getElementById("forecastResult");
+      let myChart = null;
 
-      function calcForecast() {
-        const salary = parseFloat(baseSalary.value) || 0;
-        const hours = parseFloat(otHours.value) || 0;
-        const rate = parseFloat(otRate.value) || 0;
-        const total = salary + hours * rate;
-        forecastResult.textContent = `฿${total.toLocaleString()}`;
+      // ตรวจสอบสถานะล็อกอินตอนเปิดหน้าเว็บ
+      async function checkAuth() {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session) {
+          showApp(session.user);
+        } else {
+          showLogin();
+        }
       }
-      [baseSalary, otHours, otRate].forEach((el) =>
-        el.addEventListener("input", calcForecast),
-      );
 
-      // โหลดข้อมูลจาก Supabase
+      function showLogin() {
+        document.getElementById("authSection").classList.remove("hidden");
+        document.getElementById("appSection").classList.add("hidden");
+      }
+
+      function showApp(user) {
+        document.getElementById("authSection").classList.add("hidden");
+        document.getElementById("appSection").classList.remove("hidden");
+        document.getElementById("userBadge").textContent =
+          `ผู้ใช้: ${user.email}`;
+        loadTransactions();
+      }
+
+      // จัดการ Login
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("loginEmail").value;
+          const password = document.getElementById("loginPassword").value;
+          const errorEl = document.getElementById("authError");
+          errorEl.classList.add("hidden");
+
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+          if (error) {
+            errorEl.textContent =
+              "อีเมลหรือรหัสผ่านไม่ถูกต้อง: " + error.message;
+            errorEl.classList.remove("hidden");
+          } else {
+            showApp(data.user);
+          }
+        });
+
+      // จัดการ Logout
+      document
+        .getElementById("btnLogout")
+        .addEventListener("click", async () => {
+          await supabase.auth.signOut();
+          showLogin();
+        });
+
+      // อัปเดตและวาดกราฟวงกลม
+      function renderChart(income, expense, debt) {
+        const ctx = document.getElementById("financeChart").getContext("2d");
+        if (myChart) myChart.destroy();
+
+        myChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["รายรับ", "รายจ่าย", "หนี้ตัวเอง"],
+            datasets: [
+              {
+                data: [income, expense, debt],
+                backgroundColor: ["#34d399", "#f87171", "#fbbf24"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom", labels: { color: "#94a3b8" } },
+            },
+          },
+        });
+      }
+
+      // โหลดข้อมูลและคำนวณยอด
       async function loadTransactions() {
         const { data, error } = await supabase
           .from("transactions")
           .select("*")
-          .order("created_at", { ascending: false })
-          .limit(20);
+          .order("created_at", { ascending: false });
 
         if (error) {
           console.error(error);
           return;
         }
 
-        let balance = 0;
+        let totalIncome = 0;
+        let totalExpense = 0;
         let totalSelfDebt = 0;
         const listEl = document.getElementById("txList");
         listEl.innerHTML = "";
@@ -180,9 +275,10 @@
         }
 
         data.forEach((item) => {
-          if (item.type === "income") balance += Number(item.amount);
-          if (item.type === "expense") balance -= Number(item.amount);
-          if (item.type === "self_debt") totalSelfDebt += Number(item.amount);
+          const val = Number(item.amount);
+          if (item.type === "income") totalIncome += val;
+          if (item.type === "expense") totalExpense += val;
+          if (item.type === "self_debt") totalSelfDebt += val;
 
           const typeColor =
             item.type === "income"
@@ -198,19 +294,22 @@
               <div class="font-medium">${item.title}</div>
               <div class="text-xs text-slate-500">${new Date(item.created_at).toLocaleDateString("th-TH")}</div>
             </div>
-            <div class="font-bold ${typeColor}">${sign}฿${Number(item.amount).toLocaleString()}</div>
+            <div class="font-bold ${typeColor}">${sign}฿${val.toLocaleString()}</div>
           </div>
         `;
           listEl.insertAdjacentHTML("beforeend", row);
         });
 
         document.getElementById("netBalance").textContent =
-          `฿${balance.toLocaleString()}`;
+          `฿${(totalIncome - totalExpense).toLocaleString()}`;
         document.getElementById("totalDebt").textContent =
           `฿${totalSelfDebt.toLocaleString()}`;
+
+        // อัปเดตกราฟ
+        renderChart(totalIncome, totalExpense, totalSelfDebt);
       }
 
-      // บันทึกฟอร์มลง Supabase
+      // บันทึกรายการใหม่
       document
         .getElementById("txForm")
         .addEventListener("submit", async (e) => {
@@ -232,7 +331,8 @@
           }
         });
 
-      loadTransactions();
+      // เริ่มต้นทำงาน
+      checkAuth();
     </script>
   </body>
 </html>
