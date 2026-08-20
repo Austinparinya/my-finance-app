@@ -4,24 +4,55 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Finance & Debt Planner</title>
-    <!-- Tailwind CSS CDN -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Supabase JS Client -->
+    <!-- Supabase JS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
     <div class="max-w-2xl mx-auto space-y-6">
       <!-- Header -->
-      <header class="text-center">
-        <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">
+      <header
+        class="text-center bg-slate-800/60 p-4 rounded-xl border border-slate-700"
+      >
+        <h1 class="text-xl md:text-2xl font-bold text-emerald-400">
           💰 Financial & Debt Planner
         </h1>
-        <p class="text-sm text-slate-400 mt-1">
-          บันทึกรายรับ รายจ่าย และหนี้ค้างตัวเอง
+        <p class="text-xs text-slate-400 mt-1">
+          แอปคำนวณรายจ่าย หนี้ตัวเอง และเงินเดือนล่วงหน้า
         </p>
       </header>
 
-      <!-- Summary Cards -->
+      <!-- Filter แท็บเลือกดูผู้ใช้ -->
+      <div
+        class="flex bg-slate-800 p-1.5 rounded-xl border border-slate-700 space-x-1"
+      >
+        <button
+          onclick="setFilter('all')"
+          id="tab-all"
+          class="flex-1 py-2 text-xs font-semibold rounded-lg bg-emerald-500 text-white transition"
+        >
+          🌟 รวมทุกคน
+        </button>
+        <button
+          onclick="setFilter('me')"
+          id="tab-me"
+          class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition"
+        >
+          👤 ของฉัน
+        </button>
+        <button
+          onclick="setFilter('partner')"
+          id="tab-partner"
+          class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition"
+        >
+          👩‍🦰 ของแฟน
+        </button>
+      </div>
+
+      <!-- สรุปยอดเงิน -->
       <div class="grid grid-cols-2 gap-4">
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
           <span class="text-xs text-slate-400">ยอดเงินคงเหลือคำนวณ</span>
@@ -43,7 +74,17 @@
         </div>
       </div>
 
-      <!-- Quick Forecast: เครื่องคำนวณ OT & เงินเดือนล่วงหน้า -->
+      <!-- กราฟสรุปสัดส่วน (Chart.js) -->
+      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+        <h2 class="text-sm font-semibold text-slate-300 mb-3">
+          📊 สรุปสัดส่วนการเงิน
+        </h2>
+        <div class="h-52 flex justify-center">
+          <canvas id="financeChart"></canvas>
+        </div>
+      </div>
+
+      <!-- ฟอร์มคำนวณ OT & เงินเดือนล่วงหน้า -->
       <div
         class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3"
       >
@@ -73,32 +114,39 @@
         <div
           class="flex justify-between items-center pt-2 border-t border-slate-700/60"
         >
-          <span class="text-xs text-slate-400"
-            >ประมาณการเงินเดือน + OT สิ้นเดือน:</span
-          >
+          <span class="text-xs text-slate-400">ประมาณการรายได้สิ้นเดือน:</span>
           <span id="forecastResult" class="font-bold text-sky-400">฿0</span>
         </div>
       </div>
 
-      <!-- Form บันทึกรายการ -->
+      <!-- ฟอร์มบันทึกรายการ -->
       <form
         id="txForm"
         class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4"
       >
         <h2 class="text-base font-semibold">➕ บันทึกรายการใหม่</h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <!-- เลือกว่าเป็นของใคร -->
+          <select
+            id="txOwner"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-sky-400 font-medium"
+          >
+            <option value="me">👤 ของฉัน</option>
+            <option value="partner">👩‍🦰 ของแฟน</option>
+            <option value="shared">🏠 ส่วนกลาง</option>
+          </select>
           <select
             id="txType"
             class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
           >
             <option value="expense">🔴 รายจ่าย</option>
-            <option value="income">🟢 รายรับ (เงินเดือน/โบนัส)</option>
+            <option value="income">🟢 รายรับ (เงินเดือน/โบนัส/OT)</option>
             <option value="self_debt">🟡 หนี้ตัวเอง (ยืมเงินเก็บ)</option>
           </select>
           <input
             type="text"
             id="txTitle"
-            placeholder="ชื่อรายการ (เช่น ค่าน้ำมัน, โบนัส)"
+            placeholder="ชื่อรายการ"
             required
             class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
           />
@@ -123,14 +171,12 @@
         class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3"
       >
         <h2 class="text-base font-semibold">📋 รายการล่าสุด</h2>
-        <div id="txList" class="space-y-2 text-sm">
-          <div class="text-center text-slate-500 py-4">กำลังโหลดข้อมูล...</div>
-        </div>
+        <div id="txList" class="space-y-2 text-sm"></div>
       </div>
     </div>
 
     <script>
-      // ⚙️ นำค่าจาก Supabase มาใส่ตรงนี้
+      // ⚙️ นำค่าจาก Supabase Project ของคุณมาใส่ตรงนี้
       const SUPABASE_URL = "https://osewhzluebkmpvhppvwy.supabase.co/rest/v1/";
       const SUPABASE_ANON_KEY =
         "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O";
@@ -139,7 +185,26 @@
         SUPABASE_ANON_KEY,
       );
 
-      // คำนวณ OT ล่วงหน้าแบบ Realtime
+      let myChart = null;
+      let currentFilter = "all"; // 'all', 'me', 'partner'
+
+      function setFilter(filter) {
+        currentFilter = filter;
+        // ปรับ Style ปุ่ม Tab
+        ["all", "me", "partner"].forEach((tab) => {
+          const btn = document.getElementById(`tab-${tab}`);
+          if (tab === filter) {
+            btn.className =
+              "flex-1 py-2 text-xs font-semibold rounded-lg bg-emerald-500 text-white transition";
+          } else {
+            btn.className =
+              "flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition";
+          }
+        });
+        loadTransactions();
+      }
+
+      // คำนวณ OT ล่วงหน้า
       const baseSalary = document.getElementById("baseSalary");
       const otHours = document.getElementById("otHours");
       const otRate = document.getElementById("otRate");
@@ -149,79 +214,123 @@
         const salary = parseFloat(baseSalary.value) || 0;
         const hours = parseFloat(otHours.value) || 0;
         const rate = parseFloat(otRate.value) || 0;
-        const total = salary + hours * rate;
-        forecastResult.textContent = `฿${total.toLocaleString()}`;
+        forecastResult.textContent = `฿${(salary + hours * rate).toLocaleString()}`;
       }
       [baseSalary, otHours, otRate].forEach((el) =>
         el.addEventListener("input", calcForecast),
       );
 
-      // โหลดข้อมูลจาก Supabase
+      // กราฟสรุป
+      function renderChart(income, expense, debt) {
+        const ctx = document.getElementById("financeChart").getContext("2d");
+        if (myChart) myChart.destroy();
+
+        myChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: ["รายรับ", "รายจ่าย", "หนี้ตัวเอง"],
+            datasets: [
+              {
+                data: [income, expense, debt],
+                backgroundColor: ["#34d399", "#f87171", "#fbbf24"],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom", labels: { color: "#94a3b8" } },
+            },
+          },
+        });
+      }
+
+      // แปลงชื่อ Owner เป็น Badge แสดง
+      function getOwnerBadge(owner) {
+        if (owner === "me")
+          return `<span class="text-[10px] bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/30">ฉัน</span>`;
+        if (owner === "partner")
+          return `<span class="text-[10px] bg-pink-500/20 text-pink-400 px-1.5 py-0.5 rounded border border-pink-500/30">แฟน</span>`;
+        return `<span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">ส่วนกลาง</span>`;
+      }
+
+      // โหลดข้อมูลตาม Filter
       async function loadTransactions() {
-        const { data, error } = await supabase
+        let query = supabase
           .from("transactions")
           .select("*")
-          .order("created_at", { ascending: false })
-          .limit(20);
+          .order("created_at", { ascending: false });
 
-        if (error) {
-          console.error(error);
-          return;
+        if (currentFilter !== "all") {
+          query = query.eq("owner", currentFilter);
         }
 
-        let balance = 0;
+        const { data, error } = await query;
+        if (error) return console.error(error);
+
+        let totalIncome = 0;
+        let totalExpense = 0;
         let totalSelfDebt = 0;
         const listEl = document.getElementById("txList");
         listEl.innerHTML = "";
 
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
           listEl.innerHTML =
-            '<div class="text-center text-slate-500 py-4">ยังไม่มีรายการบันทึก</div>';
+            '<div class="text-center text-slate-500 py-4">ไม่มีรายการในช่วงนี้</div>';
+        } else {
+          data.forEach((item) => {
+            const val = Number(item.amount);
+            if (item.type === "income") totalIncome += val;
+            if (item.type === "expense") totalExpense += val;
+            if (item.type === "self_debt") totalSelfDebt += val;
+
+            const typeColor =
+              item.type === "income"
+                ? "text-emerald-400"
+                : item.type === "expense"
+                  ? "text-rose-400"
+                  : "text-amber-400";
+            const sign = item.type === "income" ? "+" : "-";
+
+            const row = `
+            <div class="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+              <div class="space-y-0.5">
+                <div class="flex items-center space-x-2">
+                  <span class="font-medium">${item.title}</span>
+                  ${getOwnerBadge(item.owner)}
+                </div>
+                <div class="text-xs text-slate-500">${new Date(item.created_at).toLocaleDateString("th-TH")}</div>
+              </div>
+              <div class="font-bold ${typeColor}">${sign}฿${val.toLocaleString()}</div>
+            </div>
+          `;
+            listEl.insertAdjacentHTML("beforeend", row);
+          });
         }
 
-        data.forEach((item) => {
-          if (item.type === "income") balance += Number(item.amount);
-          if (item.type === "expense") balance -= Number(item.amount);
-          if (item.type === "self_debt") totalSelfDebt += Number(item.amount);
-
-          const typeColor =
-            item.type === "income"
-              ? "text-emerald-400"
-              : item.type === "expense"
-                ? "text-rose-400"
-                : "text-amber-400";
-          const sign = item.type === "income" ? "+" : "-";
-
-          const row = `
-          <div class="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
-            <div>
-              <div class="font-medium">${item.title}</div>
-              <div class="text-xs text-slate-500">${new Date(item.created_at).toLocaleDateString("th-TH")}</div>
-            </div>
-            <div class="font-bold ${typeColor}">${sign}฿${Number(item.amount).toLocaleString()}</div>
-          </div>
-        `;
-          listEl.insertAdjacentHTML("beforeend", row);
-        });
-
         document.getElementById("netBalance").textContent =
-          `฿${balance.toLocaleString()}`;
+          `฿${(totalIncome - totalExpense).toLocaleString()}`;
         document.getElementById("totalDebt").textContent =
           `฿${totalSelfDebt.toLocaleString()}`;
+
+        renderChart(totalIncome, totalExpense, totalSelfDebt);
       }
 
-      // บันทึกฟอร์มลง Supabase
+      // บันทึกรายการใหม่
       document
         .getElementById("txForm")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
+          const owner = document.getElementById("txOwner").value;
           const type = document.getElementById("txType").value;
           const title = document.getElementById("txTitle").value;
           const amount = parseFloat(document.getElementById("txAmount").value);
 
           const { error } = await supabase
             .from("transactions")
-            .insert([{ type, title, amount }]);
+            .insert([{ owner, type, title, amount }]);
 
           if (error) {
             alert("เกิดข้อผิดพลาด: " + error.message);
