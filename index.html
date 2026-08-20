@@ -41,14 +41,14 @@
           id="tab-me"
           class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition"
         >
-          👤 Austin
+          👤 ของฉัน
         </button>
         <button
           onclick="setFilter('partner')"
           id="tab-partner"
           class="flex-1 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition"
         >
-          👩‍🦰 Fern
+          👩‍🦰 ของแฟน
         </button>
       </div>
 
@@ -126,7 +126,6 @@
       >
         <h2 class="text-base font-semibold">➕ บันทึกรายการใหม่</h2>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <!-- เลือกว่าเป็นของใคร -->
           <select
             id="txOwner"
             class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm text-sky-400 font-medium"
@@ -176,21 +175,20 @@
     </div>
 
     <script>
-      // ⚙️ นำค่าจาก Supabase Project ของคุณมาใส่ตรงนี้
+      // ⚙️ นำค่าจาก Supabase Project มาใส่ตรงนี้
       const SUPABASE_URL = "https://osewhzluebkmpvhppvwy.supabase.co/rest/v1/";
       const SUPABASE_ANON_KEY =
         "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O";
-      const supabase = window.supabase.createClient(
+      const supabaseClient = window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_ANON_KEY,
       );
 
       let myChart = null;
-      let currentFilter = "all"; // 'all', 'me', 'partner'
+      let currentFilter = "all";
 
       function setFilter(filter) {
         currentFilter = filter;
-        // ปรับ Style ปุ่ม Tab
         ["all", "me", "partner"].forEach((tab) => {
           const btn = document.getElementById(`tab-${tab}`);
           if (tab === filter) {
@@ -204,7 +202,6 @@
         loadTransactions();
       }
 
-      // คำนวณ OT ล่วงหน้า
       const baseSalary = document.getElementById("baseSalary");
       const otHours = document.getElementById("otHours");
       const otRate = document.getElementById("otRate");
@@ -220,7 +217,6 @@
         el.addEventListener("input", calcForecast),
       );
 
-      // กราฟสรุป
       function renderChart(income, expense, debt) {
         const ctx = document.getElementById("financeChart").getContext("2d");
         if (myChart) myChart.destroy();
@@ -247,7 +243,6 @@
         });
       }
 
-      // แปลงชื่อ Owner เป็น Badge แสดง
       function getOwnerBadge(owner) {
         if (owner === "me")
           return `<span class="text-[10px] bg-sky-500/20 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/30">ฉัน</span>`;
@@ -256,9 +251,8 @@
         return `<span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded">ส่วนกลาง</span>`;
       }
 
-      // โหลดข้อมูลตาม Filter
       async function loadTransactions() {
-        let query = supabase
+        let query = supabaseClient
           .from("transactions")
           .select("*")
           .order("created_at", { ascending: false });
@@ -268,7 +262,10 @@
         }
 
         const { data, error } = await query;
-        if (error) return console.error(error);
+        if (error) {
+          console.error("Error loading:", error);
+          return;
+        }
 
         let totalIncome = 0;
         let totalExpense = 0;
@@ -278,7 +275,7 @@
 
         if (!data || data.length === 0) {
           listEl.innerHTML =
-            '<div class="text-center text-slate-500 py-4">ไม่มีรายการในช่วงนี้</div>';
+            '<div class="text-center text-slate-500 py-4">ไม่มีรายการบันทึก</div>';
         } else {
           data.forEach((item) => {
             const val = Number(item.amount);
@@ -318,7 +315,6 @@
         renderChart(totalIncome, totalExpense, totalSelfDebt);
       }
 
-      // บันทึกรายการใหม่
       document
         .getElementById("txForm")
         .addEventListener("submit", async (e) => {
@@ -328,12 +324,13 @@
           const title = document.getElementById("txTitle").value;
           const amount = parseFloat(document.getElementById("txAmount").value);
 
-          const { error } = await supabase
+          const { error } = await supabaseClient
             .from("transactions")
             .insert([{ owner, type, title, amount }]);
 
           if (error) {
-            alert("เกิดข้อผิดพลาด: " + error.message);
+            alert("บันทึกไม่สำเร็จ: " + error.message);
+            console.error(error);
           } else {
             document.getElementById("txTitle").value = "";
             document.getElementById("txAmount").value = "";
