@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Finance & Debt Planner</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8 font-sans">
+    <div class="max-w-2xl mx-auto space-y-6">
+      <!-- Header -->
+      <header class="text-center">
+        <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">
+          💰 Financial & Debt Planner
+        </h1>
+        <p class="text-sm text-slate-400 mt-1">
+          บันทึกรายรับ รายจ่าย และหนี้ค้างตัวเอง
+        </p>
+      </header>
+
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <span class="text-xs text-slate-400">ยอดเงินคงเหลือคำนวณ</span>
+          <div
+            id="netBalance"
+            class="text-xl md:text-2xl font-bold text-emerald-400 mt-1"
+          >
+            ฿0
+          </div>
+        </div>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <span class="text-xs text-slate-400">ยอดติดหนี้เงินเก็บตัวเอง</span>
+          <div
+            id="totalDebt"
+            class="text-xl md:text-2xl font-bold text-rose-400 mt-1"
+          >
+            ฿0
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Forecast: เครื่องคำนวณ OT & เงินเดือนล่วงหน้า -->
+      <div
+        class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 space-y-3"
+      >
+        <h2 class="text-sm font-semibold text-sky-300">
+          ⚡ คำนวณรายได้ล่วงหน้า (เงินเดือน + OT)
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input
+            type="number"
+            id="baseSalary"
+            placeholder="เงินเดือนฐาน (฿)"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:border-sky-500"
+          />
+          <input
+            type="number"
+            id="otHours"
+            placeholder="จำนวนชั่วโมง OT"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:border-sky-500"
+          />
+          <input
+            type="number"
+            id="otRate"
+            placeholder="เรท OT ต่อ ชม. (฿)"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2 text-sm focus:outline-none focus:border-sky-500"
+          />
+        </div>
+        <div
+          class="flex justify-between items-center pt-2 border-t border-slate-700/60"
+        >
+          <span class="text-xs text-slate-400"
+            >ประมาณการเงินเดือน + OT สิ้นเดือน:</span
+          >
+          <span id="forecastResult" class="font-bold text-sky-400">฿0</span>
+        </div>
+      </div>
+
+      <!-- Form บันทึกรายการ -->
+      <form
+        id="txForm"
+        class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-4"
+      >
+        <h2 class="text-base font-semibold">➕ บันทึกรายการใหม่</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <select
+            id="txType"
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+          >
+            <option value="expense">🔴 รายจ่าย</option>
+            <option value="income">🟢 รายรับ (เงินเดือน/โบนัส)</option>
+            <option value="self_debt">🟡 หนี้ตัวเอง (ยืมเงินเก็บ)</option>
+          </select>
+          <input
+            type="text"
+            id="txTitle"
+            placeholder="ชื่อรายการ (เช่น ค่าน้ำมัน, โบนัส)"
+            required
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+          />
+          <input
+            type="number"
+            id="txAmount"
+            placeholder="จำนวนเงิน (฿)"
+            required
+            class="bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-sm"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-emerald-500 hover:bg-emerald-600 font-semibold py-2.5 rounded-lg text-sm transition"
+        >
+          บันทึกข้อมูล
+        </button>
+      </form>
+
+      <!-- รายการย้อนหลัง -->
+      <div
+        class="bg-slate-800 p-5 rounded-xl border border-slate-700 space-y-3"
+      >
+        <h2 class="text-base font-semibold">📋 รายการล่าสุด</h2>
+        <div id="txList" class="space-y-2 text-sm">
+          <div class="text-center text-slate-500 py-4">กำลังโหลดข้อมูล...</div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ⚙️ นำค่าจาก Supabase มาใส่ตรงนี้
+      const SUPABASE_URL = "https://osewhzluebkmpvhppvwy.supabase.co/rest/v1/";
+      const SUPABASE_ANON_KEY =
+        "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O";
+      const supabase = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+      );
+
+      // คำนวณ OT ล่วงหน้าแบบ Realtime
+      const baseSalary = document.getElementById("baseSalary");
+      const otHours = document.getElementById("otHours");
+      const otRate = document.getElementById("otRate");
+      const forecastResult = document.getElementById("forecastResult");
+
+      function calcForecast() {
+        const salary = parseFloat(baseSalary.value) || 0;
+        const hours = parseFloat(otHours.value) || 0;
+        const rate = parseFloat(otRate.value) || 0;
+        const total = salary + hours * rate;
+        forecastResult.textContent = `฿${total.toLocaleString()}`;
+      }
+      [baseSalary, otHours, otRate].forEach((el) =>
+        el.addEventListener("input", calcForecast),
+      );
+
+      // โหลดข้อมูลจาก Supabase
+      async function loadTransactions() {
+        const { data, error } = await supabase
+          .from("transactions")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (error) {
+          console.error(error);
+          return;
+        }
+
+        let balance = 0;
+        let totalSelfDebt = 0;
+        const listEl = document.getElementById("txList");
+        listEl.innerHTML = "";
+
+        if (data.length === 0) {
+          listEl.innerHTML =
+            '<div class="text-center text-slate-500 py-4">ยังไม่มีรายการบันทึก</div>';
+        }
+
+        data.forEach((item) => {
+          if (item.type === "income") balance += Number(item.amount);
+          if (item.type === "expense") balance -= Number(item.amount);
+          if (item.type === "self_debt") totalSelfDebt += Number(item.amount);
+
+          const typeColor =
+            item.type === "income"
+              ? "text-emerald-400"
+              : item.type === "expense"
+                ? "text-rose-400"
+                : "text-amber-400";
+          const sign = item.type === "income" ? "+" : "-";
+
+          const row = `
+          <div class="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg border border-slate-700/50">
+            <div>
+              <div class="font-medium">${item.title}</div>
+              <div class="text-xs text-slate-500">${new Date(item.created_at).toLocaleDateString("th-TH")}</div>
+            </div>
+            <div class="font-bold ${typeColor}">${sign}฿${Number(item.amount).toLocaleString()}</div>
+          </div>
+        `;
+          listEl.insertAdjacentHTML("beforeend", row);
+        });
+
+        document.getElementById("netBalance").textContent =
+          `฿${balance.toLocaleString()}`;
+        document.getElementById("totalDebt").textContent =
+          `฿${totalSelfDebt.toLocaleString()}`;
+      }
+
+      // บันทึกฟอร์มลง Supabase
+      document
+        .getElementById("txForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const type = document.getElementById("txType").value;
+          const title = document.getElementById("txTitle").value;
+          const amount = parseFloat(document.getElementById("txAmount").value);
+
+          const { error } = await supabase
+            .from("transactions")
+            .insert([{ type, title, amount }]);
+
+          if (error) {
+            alert("เกิดข้อผิดพลาด: " + error.message);
+          } else {
+            document.getElementById("txTitle").value = "";
+            document.getElementById("txAmount").value = "";
+            loadTransactions();
+          }
+        });
+
+      loadTransactions();
+    </script>
+  </body>
+</html>
