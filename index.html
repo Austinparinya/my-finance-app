@@ -317,11 +317,11 @@
     </div>
 
     <script>
-      // ⚙️ ตั้งค่า Supabase API
+      // ⚙️ ตั้งค่า Supabase API (เปลี่ยนชื่อตัวแปรเป็น supabaseClient ป้องกันชื่อชนกับ Library)
       const SUPABASE_URL = "https://osewhzluebkmpvhppvwy.supabase.co";
       const SUPABASE_ANON_KEY =
-        "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O"; // 👈 นำ Publishable Key เต็มๆ ของคุณมาวางตรงนี้
-      const supabase = window.supabase.createClient(
+        "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O";
+      const supabaseClient = window.supabase.createClient(
         SUPABASE_URL,
         SUPABASE_ANON_KEY,
       );
@@ -332,7 +332,7 @@
       async function checkAuth() {
         const {
           data: { session },
-        } = await supabase.auth.getSession();
+        } = await supabaseClient.auth.getSession();
         if (session) {
           currentUser = session.user;
           document.getElementById("loginScreen").classList.add("hidden");
@@ -355,7 +355,7 @@
           const errEl = document.getElementById("authError");
           errEl.classList.add("hidden");
 
-          const { error } = await supabase.auth.signInWithPassword({
+          const { error } = await supabaseClient.auth.signInWithPassword({
             email,
             password,
           });
@@ -368,12 +368,12 @@
         });
 
       async function handleLogout() {
-        await supabase.auth.signOut();
+        await supabaseClient.auth.signOut();
         window.location.reload();
       }
 
       async function loadMasterSettings() {
-        const { data } = await supabase
+        const { data } = await supabaseClient
           .from("user_profiles")
           .select("*")
           .eq("id", currentUser.id)
@@ -396,7 +396,7 @@
           parseFloat(document.getElementById("cfgBaseSalary").value) || 0;
         const fixed_allowance =
           parseFloat(document.getElementById("cfgFixedAllowance").value) || 0;
-        await supabase
+        await supabaseClient
           .from("user_profiles")
           .update({ base_salary, fixed_allowance })
           .eq("id", currentUser.id);
@@ -409,7 +409,7 @@
           parseFloat(document.getElementById("cfgInitialSavings").value) || 0;
         const initial_debt =
           parseFloat(document.getElementById("cfgInitialDebt").value) || 0;
-        await supabase
+        await supabaseClient
           .from("user_profiles")
           .update({ initial_savings, initial_debt })
           .eq("id", currentUser.id);
@@ -439,7 +439,7 @@
       async function initDashboard() {
         await loadMasterSettings();
 
-        const { data: profiles } = await supabase
+        const { data: profiles } = await supabaseClient
           .from("user_profiles")
           .select("*");
         let totalInitSavings = 0;
@@ -449,7 +449,7 @@
           totalInitDebt += Number(p.initial_debt || 0);
         });
 
-        const { data: txs } = await supabase
+        const { data: txs } = await supabaseClient
           .from("transactions")
           .select("*")
           .order("created_at", { ascending: false });
@@ -568,7 +568,7 @@
           const category = document.getElementById("txCategory").value;
           const amount = parseFloat(document.getElementById("txAmount").value);
 
-          const { error } = await supabase.from("transactions").insert([
+          const { error } = await supabaseClient.from("transactions").insert([
             {
               user_id: currentUser.id,
               account_scope,
