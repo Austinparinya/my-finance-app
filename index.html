@@ -1,0 +1,1211 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Couple Finance Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body
+    class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-emerald-500 selection:text-slate-950"
+  >
+    <!-- Toast แจ้งเตือน -->
+    <div
+      id="toast"
+      class="fixed top-5 right-5 z-50 transform translate-y-[-150%] opacity-0 transition-all duration-300 pointer-events-none"
+    >
+      <div
+        id="toastContent"
+        class="px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2"
+      >
+        <span id="toastIcon"></span>
+        <span id="toastMsg"></span>
+      </div>
+    </div>
+
+    <!-- Login Screen -->
+    <div
+      id="loginScreen"
+      class="min-h-screen flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-slate-900 border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl space-y-6"
+      >
+        <div class="text-center space-y-2">
+          <div
+            class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-2xl"
+          >
+            💍
+          </div>
+          <h1 class="text-xl font-bold text-white tracking-tight">
+            Couple Finance Hub
+          </h1>
+          <p class="text-xs text-slate-400">
+            ระบบบริหารการเงินส่วนบุคคลและคู่รัก
+          </p>
+        </div>
+        <form id="authForm" class="space-y-4">
+          <div>
+            <label class="text-xs font-medium text-slate-400">อีเมล</label>
+            <input
+              type="email"
+              id="authEmail"
+              required
+              placeholder="name@domain.com"
+              class="w-full mt-1.5 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+          <div>
+            <label class="text-xs font-medium text-slate-400">รหัสผ่าน</label>
+            <input
+              type="password"
+              id="authPassword"
+              required
+              placeholder="••••••••"
+              class="w-full mt-1.5 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-emerald-500 transition"
+            />
+          </div>
+          <button
+            type="submit"
+            id="btnLogin"
+            class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition duration-200"
+          >
+            เข้าสู่ระบบ
+          </button>
+          <p
+            id="authError"
+            class="text-xs text-rose-400 text-center hidden"
+          ></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Dashboard Screen -->
+    <div id="dashboardScreen" class="hidden min-h-screen pb-12">
+      <!-- Top Navigation -->
+      <nav
+        class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur-md sticky top-0 z-40"
+      >
+        <div
+          class="max-w-6xl mx-auto px-4 md:px-8 py-3.5 flex justify-between items-center"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-xl">💰</span>
+            <div>
+              <span class="text-sm font-bold text-white tracking-tight"
+                >Couple Finance</span
+              >
+              <p class="text-[10px] text-slate-400" id="userEmailTag"></p>
+            </div>
+          </div>
+          <button
+            onclick="handleLogout()"
+            class="text-xs text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-500/40 px-3 py-1.5 rounded-xl transition"
+          >
+            ออกจากระบบ
+          </button>
+        </div>
+      </nav>
+
+      <main class="max-w-6xl mx-auto px-4 md:px-8 pt-6 space-y-6">
+        <!-- Tab Selector & Month Filter -->
+        <div
+          class="flex flex-col sm:flex-row justify-between items-center gap-4"
+        >
+          <div
+            class="flex bg-slate-900/80 p-1 rounded-2xl border border-slate-800/80 w-full sm:w-auto gap-1"
+          >
+            <button
+              onclick="switchTab('overview')"
+              id="nav-overview"
+              class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 text-slate-950 transition"
+            >
+              📊 ภาพรวม
+            </button>
+            <button
+              onclick="switchTab('transaction')"
+              id="nav-transaction"
+              class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-slate-200 transition"
+            >
+              ➕ บันทึกข้อมูล
+            </button>
+            <button
+              onclick="switchTab('salary')"
+              id="nav-salary"
+              class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-slate-200 transition"
+            >
+              ⚡ เงินเดือน & OT
+            </button>
+            <button
+              onclick="switchTab('debt')"
+              id="nav-debt"
+              class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-slate-200 transition"
+            >
+              💳 หนี้สินของฉัน
+            </button>
+            <button
+              onclick="switchTab('settings')"
+              id="nav-settings"
+              class="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-slate-200 transition"
+            >
+              ⚙️ ทุนตั้งต้น
+            </button>
+          </div>
+
+          <!-- ตัวกรองเดือน (Month Filter) -->
+          <div
+            class="flex items-center gap-2 w-full sm:w-auto bg-slate-900/80 border border-slate-800/80 px-3 py-1.5 rounded-2xl"
+          >
+            <span class="text-xs text-slate-400">📅 ประจำเดือน:</span>
+            <input
+              type="month"
+              id="filterMonth"
+              class="bg-transparent text-xs text-emerald-400 font-bold focus:outline-none cursor-pointer"
+              onchange="initDashboard()"
+            />
+          </div>
+        </div>
+
+        <!-- ================= TAB 1: ภาพรวม (Overview) ================= -->
+        <section id="tab-content-overview" class="space-y-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div
+              class="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl"
+            >
+              <span class="text-[11px] font-medium text-slate-400"
+                >💎 สินทรัพย์สุทธิ (ของฉัน)</span
+              >
+              <div
+                id="cardNetSavings"
+                class="text-2xl font-bold text-emerald-400 mt-2"
+              >
+                ฿0
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">
+                ทุนตั้งต้น + เงินออมส่วนตัว + ส่วนกลางที่เกี่ยวข้อง
+              </p>
+            </div>
+
+            <div
+              class="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl"
+            >
+              <span class="text-[11px] font-medium text-slate-400"
+                >💳 หนี้สินคงเหลือ (ของฉัน)</span
+              >
+              <div
+                id="cardRemainingDebt"
+                class="text-2xl font-bold text-rose-400 mt-2"
+              >
+                ฿0
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">
+                เฉพาะรายการหนี้ของคุณเอง
+              </p>
+            </div>
+
+            <div
+              class="bg-slate-900/90 border border-indigo-500/30 p-5 rounded-2xl"
+            >
+              <span class="text-[11px] font-semibold text-indigo-300"
+                >⚖️ สถานะการเงินสุทธิ (ของฉัน)</span
+              >
+              <div
+                id="cardNetPosition"
+                class="text-2xl font-bold text-indigo-400 mt-2"
+              >
+                ฿0
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">
+                สินทรัพย์สุทธิ - หนี้คงเหลือ
+              </p>
+            </div>
+
+            <div
+              class="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl"
+            >
+              <span class="text-[11px] font-medium text-slate-400"
+                >🏠 เงินออมกองกลาง (มองเห็นร่วมกัน)</span
+              >
+              <div
+                id="cardSharedSavings"
+                class="text-2xl font-bold text-sky-400 mt-2"
+              >
+                ฿0
+              </div>
+              <p class="text-[10px] text-slate-500 mt-1">
+                ยอดสะสมในส่วนกลางทั้งหมด
+              </p>
+            </div>
+          </div>
+
+          <!-- Summary Cards ประจำเดือนที่เลือก -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div
+              class="bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-2xl"
+            >
+              <span class="text-xs text-emerald-400 font-medium"
+                >📥 รายรับเดือนนี้ (เฉพาะฉัน)</span
+              >
+              <div
+                id="cardMonthIncome"
+                class="text-xl font-bold text-emerald-400 mt-1"
+              >
+                ฿0
+              </div>
+            </div>
+            <div
+              class="bg-rose-950/20 border border-rose-500/20 p-4 rounded-2xl"
+            >
+              <span class="text-xs text-rose-400 font-medium"
+                >📤 รายจ่ายเดือนนี้ (เฉพาะฉัน + ส่วนกลาง)</span
+              >
+              <div
+                id="cardMonthExpense"
+                class="text-xl font-bold text-rose-400 mt-1"
+              >
+                ฿0
+              </div>
+            </div>
+            <div class="bg-sky-950/20 border border-sky-500/20 p-4 rounded-2xl">
+              <span class="text-xs text-sky-400 font-medium"
+                >✨ คงเหลือสุทธิเดือนนี้</span
+              >
+              <div
+                id="cardMonthBalance"
+                class="text-xl font-bold text-sky-400 mt-1"
+              >
+                ฿0
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div
+              class="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl flex flex-col items-center"
+            >
+              <span class="text-xs font-semibold text-slate-300 self-start mb-4"
+                >📊 เปรียบเทียบ รายรับ vs รายจ่าย (เดือนนี้)</span
+              >
+              <div class="w-full h-56 relative">
+                <canvas id="incomeVsExpenseChart"></canvas>
+              </div>
+            </div>
+
+            <div
+              class="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl flex flex-col items-center"
+            >
+              <span class="text-xs font-semibold text-slate-300 self-start mb-4"
+                >🥧 สัดส่วนรายจ่ายแยกหมวดหมู่</span
+              >
+              <div class="w-full h-56 relative">
+                <canvas id="categoryChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Transactions -->
+          <div
+            class="bg-slate-900/60 border border-slate-800/80 p-5 rounded-2xl space-y-4"
+          >
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-semibold text-slate-300"
+                >รายการธุรกรรมของคุณ (ส่วนตัว + ส่วนกลาง)</span
+              >
+              <span class="text-[10px] text-slate-500" id="txCountTag"
+                >0 รายการ</span
+              >
+            </div>
+            <div
+              id="txRecentList"
+              class="space-y-2 max-h-80 overflow-y-auto pr-1"
+            ></div>
+          </div>
+        </section>
+
+        <!-- ================= TAB 2: บันทึกข้อมูล (Transaction) ================= -->
+        <section
+          id="tab-content-transaction"
+          class="hidden max-w-xl mx-auto bg-slate-900/80 border border-slate-800/80 p-6 rounded-3xl space-y-5"
+        >
+          <div>
+            <h2 class="text-sm font-bold text-emerald-400">
+              ลงบันทึกรายการด่วน
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              ระบบลงวันที่ปัจจุบันให้อัตโนมัติ สามารถแก้ไขได้
+            </p>
+          </div>
+
+          <form id="txForm" class="space-y-4">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-[11px] text-slate-400">วันที่ทำรายการ</label>
+                <input
+                  type="date"
+                  id="txDate"
+                  required
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200"
+                />
+              </div>
+              <div>
+                <label class="text-[11px] text-slate-400">ขอบเขตบัญชี</label>
+                <select
+                  id="txScope"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs"
+                >
+                  <option value="shared">🏠 ส่วนกลาง (มองเห็นร่วมกัน)</option>
+                  <option value="personal">👤 ส่วนตัว (เฉพาะฉัน)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400">ประเภทรายการ</label>
+              <select
+                id="txType"
+                class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs"
+              >
+                <option value="expense">🔴 รายจ่าย</option>
+                <option value="income">🟢 รายรับทั่วไป</option>
+                <option value="savings_deposit">💎 ฝากเงินออม</option>
+                <option value="debt_payment">💳 ตัดชำระหนี้</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400"
+                >ชื่อรายการ / หมวดหมู่</label
+              >
+              <input
+                type="text"
+                id="txCategory"
+                required
+                placeholder="เช่น ค่ากิน, ค่าน้ำมัน, ชำระหนี้บัตรเครดิต"
+                class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs"
+              />
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400">จำนวนเงิน (฿)</label>
+              <input
+                type="number"
+                id="txAmount"
+                required
+                step="any"
+                placeholder="0.00"
+                class="w-full mt-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-emerald-400 font-bold"
+              />
+            </div>
+
+            <button
+              type="submit"
+              id="btnSubmitTx"
+              class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition"
+            >
+              บันทึกรายการ
+            </button>
+          </form>
+        </section>
+
+        <!-- ================= TAB 3: เงินเดือน & OT Engine ================= -->
+        <section
+          id="tab-content-salary"
+          class="hidden max-w-xl mx-auto space-y-6"
+        >
+          <div
+            class="bg-slate-900/80 border border-slate-800/80 p-6 rounded-3xl space-y-4"
+          >
+            <div class="flex justify-between items-center">
+              <div>
+                <h2 class="text-sm font-bold text-sky-400">
+                  ⚙️ ฐานเงินเดือน & สิทธิประจำ (จดจำถาวร)
+                </h2>
+                <p class="text-[11px] text-slate-400">
+                  ระบบจะหักประกันสังคม 750 บาท อัตโนมัติ
+                </p>
+              </div>
+              <button
+                onclick="saveSalaryMaster()"
+                class="text-xs bg-sky-500/20 text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-xl hover:bg-sky-500/30 transition"
+              >
+                บันทึกค่าคงที่
+              </button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="text-slate-400">เงินเดือนพื้นฐาน (฿)</label>
+                <input
+                  type="number"
+                  id="cfgBaseSalary"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 p-2.5 rounded-xl"
+                />
+              </div>
+              <div>
+                <label class="text-slate-400">สวัสดิการประจำ (฿)</label>
+                <input
+                  type="number"
+                  id="cfgFixedAllowance"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 p-2.5 rounded-xl"
+                />
+              </div>
+              <div>
+                <label class="text-slate-400">เรท OT ต่อวัน (฿)</label>
+                <input
+                  type="number"
+                  id="cfgOtRatePerDay"
+                  placeholder="เช่น 500"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 p-2.5 rounded-xl"
+                />
+              </div>
+              <div>
+                <label class="text-slate-400">เรท OT ต่อ ชม. (฿)</label>
+                <input
+                  type="number"
+                  id="cfgOtRatePerHour"
+                  placeholder="เช่น 150"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 p-2.5 rounded-xl"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div
+            class="bg-slate-900/90 border border-emerald-500/30 p-6 rounded-3xl space-y-4 shadow-xl"
+          >
+            <div>
+              <h2 class="text-sm font-bold text-emerald-400">
+                ⚡ คำนวณรายได้สุทธิเดือนนี้
+              </h2>
+              <p class="text-[11px] text-slate-400">
+                กรอกแค่วันทำ OT ระบบจะคิดยอดสุทธิหลังหักประกันสังคมให้ทันที
+              </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-slate-300"
+                  >จำนวนวันที่ทำ OT (วัน)</label
+                >
+                <input
+                  type="number"
+                  id="inputOtDays"
+                  placeholder="0"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm font-bold text-sky-400"
+                />
+              </div>
+              <div>
+                <label class="text-xs text-slate-300"
+                  >ชม. OT เสริม (ถ้ามี)</label
+                >
+                <input
+                  type="number"
+                  id="inputOtExtraHours"
+                  placeholder="0"
+                  class="w-full mt-1 bg-slate-950 border border-slate-800 p-3 rounded-xl text-sm"
+                />
+              </div>
+            </div>
+
+            <!-- แจกแจงการคำนวณเงินสุทธิ -->
+            <div
+              class="p-4 bg-slate-950/70 border border-slate-800/80 rounded-2xl space-y-2 text-xs"
+            >
+              <div class="flex justify-between text-slate-400">
+                <span>เงินเดือน + สวัสดิการ:</span>
+                <span id="calcBaseSummary" class="text-slate-200">฿0</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>ค่า OT รวม:</span>
+                <span id="calcOtSummary" class="text-sky-400 font-semibold"
+                  >+฿0</span
+                >
+              </div>
+              <div class="flex justify-between text-rose-400">
+                <span>หัก ประกันสังคม (Social Security):</span>
+                <span id="calcSsoDeduction">-฿750</span>
+              </div>
+              <div
+                class="border-t border-slate-800 pt-2 flex justify-between items-center text-sm font-bold"
+              >
+                <span class="text-slate-300"
+                  >รายได้สุทธิที่จะได้รับ (Net Salary):</span
+                >
+                <span id="calcGrandTotal" class="text-emerald-400 text-lg"
+                  >฿0</span
+                >
+              </div>
+            </div>
+
+            <button
+              onclick="applySalaryAsIncome()"
+              class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition"
+            >
+              📥 นำยอดสุทธินี้บันทึกเป็นรายรับเดือนนี้ (เข้าบัญชีส่วนตัว)
+            </button>
+          </div>
+        </section>
+
+        <!-- ================= TAB 4: รายการหนี้สินส่วนตัว ================= -->
+        <section
+          id="tab-content-debt"
+          class="hidden max-w-2xl mx-auto space-y-6"
+        >
+          <!-- ฟอร์มเพิ่มหนี้ใหม่ -->
+          <div
+            class="bg-slate-900/80 border border-slate-800/80 p-6 rounded-3xl space-y-4"
+          >
+            <div>
+              <h2 class="text-sm font-bold text-rose-400">
+                ➕ เพิ่มรายการภาระหนี้สินของคุณ
+              </h2>
+              <p class="text-xs text-slate-400">
+                ข้อมูลหนี้ส่วนนี้จะแสดงเฉพาะบัญชีของคุณเท่านั้น
+              </p>
+            </div>
+            <form
+              id="addDebtForm"
+              class="grid grid-cols-1 sm:grid-cols-3 gap-3"
+            >
+              <input
+                type="text"
+                id="debtTitle"
+                required
+                placeholder="ชื่อหนี้ (เช่น บัตร KBank, ผ่อนมือถือ)"
+                class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs sm:col-span-2"
+              />
+              <input
+                type="number"
+                id="debtAmount"
+                required
+                step="any"
+                placeholder="ยอดหนี้เต็ม (฿)"
+                class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-rose-400 font-bold"
+              />
+              <button
+                type="submit"
+                class="sm:col-span-3 py-2.5 bg-rose-500 hover:bg-rose-600 font-semibold rounded-xl text-xs text-white transition"
+              >
+                เพิ่มรายการหนี้
+              </button>
+            </form>
+          </div>
+
+          <!-- ตารางรายการหนี้สินทั้งหมดของคุณ -->
+          <div
+            class="bg-slate-900/80 border border-slate-800/80 p-6 rounded-3xl space-y-4"
+          >
+            <h2 class="text-sm font-bold text-slate-200">
+              📋 รายการหนี้สินของคุณ
+            </h2>
+            <div id="debtList" class="space-y-3"></div>
+          </div>
+        </section>
+
+        <!-- ================= TAB 5: ตั้งค่าทุนตั้งต้น ================= -->
+        <section
+          id="tab-content-settings"
+          class="hidden max-w-xl mx-auto bg-slate-900/80 border border-slate-800/80 p-6 rounded-3xl space-y-5"
+        >
+          <div>
+            <h2 class="text-sm font-bold text-amber-400">
+              🎯 ตั้งค่ายอดเงินเก็บตั้งต้น
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">
+              ยอดเงินออม/ทุนสำรองตั้งต้นส่วนตัวของคุณ
+            </p>
+          </div>
+          <div class="space-y-4 text-xs">
+            <div>
+              <label class="text-slate-400"
+                >เงินเก็บตั้งต้นของคุณ (Initial Capital ฿)</label
+              >
+              <input
+                type="number"
+                id="cfgInitialSavings"
+                class="w-full mt-1 bg-slate-950 border border-slate-800 p-3 rounded-xl text-emerald-400 font-bold"
+              />
+            </div>
+            <button
+              onclick="saveInitialBalances()"
+              class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition"
+            >
+              บันทึกเงินเก็บตั้งต้น
+            </button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const SUPABASE_URL = "https://osewhzluebkmpvhppvwy.supabase.co";
+      const SUPABASE_ANON_KEY =
+        "sb_publishable_8IpUC9wg3pslX7lSo_3KzQ_mMrouo8O";
+      const supabaseClient = window.supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_ANON_KEY,
+      );
+
+      let currentUser = null;
+      let incomeVsExpenseChart = null;
+      let categoryChart = null;
+
+      document.getElementById("txDate").value = new Date()
+        .toISOString()
+        .split("T")[0];
+      document.getElementById("filterMonth").value = new Date()
+        .toISOString()
+        .slice(0, 7);
+
+      function showToast(msg, isSuccess = true) {
+        const toast = document.getElementById("toast");
+        const content = document.getElementById("toastContent");
+        document.getElementById("toastMsg").textContent = msg;
+        document.getElementById("toastIcon").textContent = isSuccess
+          ? "✅"
+          : "⚠️";
+        content.className = `px-4 py-3 rounded-xl shadow-2xl border text-xs font-semibold flex items-center gap-2 ${isSuccess ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-300" : "bg-rose-950/90 border-rose-500/50 text-rose-300"}`;
+        toast.classList.remove("translate-y-[-150%]", "opacity-0");
+        setTimeout(
+          () => toast.classList.add("translate-y-[-150%]", "opacity-0"),
+          2500,
+        );
+      }
+
+      function switchTab(tab) {
+        ["overview", "transaction", "salary", "debt", "settings"].forEach(
+          (t) => {
+            const content = document.getElementById(`tab-content-${t}`);
+            const btn = document.getElementById(`nav-${t}`);
+            if (t === tab) {
+              content.classList.remove("hidden");
+              btn.className =
+                "flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 text-slate-950 transition";
+            } else {
+              content.classList.add("hidden");
+              btn.className =
+                "flex-1 sm:flex-none px-4 py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-slate-200 transition";
+            }
+          },
+        );
+      }
+
+      async function checkAuth() {
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
+        if (session) {
+          currentUser = session.user;
+          document.getElementById("loginScreen").classList.add("hidden");
+          document.getElementById("dashboardScreen").classList.remove("hidden");
+          document.getElementById("userEmailTag").textContent =
+            currentUser.email;
+          await loadUserProfile();
+          await initDashboard();
+        } else {
+          document.getElementById("loginScreen").classList.remove("hidden");
+          document.getElementById("dashboardScreen").classList.add("hidden");
+        }
+      }
+
+      document
+        .getElementById("authForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById("btnLogin");
+          btn.disabled = true;
+          btn.textContent = "กำลังเข้าสู่ระบบ...";
+          const errEl = document.getElementById("authError");
+          errEl.classList.add("hidden");
+
+          const { error } = await supabaseClient.auth.signInWithPassword({
+            email: document.getElementById("authEmail").value,
+            password: document.getElementById("authPassword").value,
+          });
+
+          btn.disabled = false;
+          btn.textContent = "เข้าสู่ระบบ";
+
+          if (error) {
+            errEl.textContent = "เข้าสู่ระบบไม่สำเร็จ: " + error.message;
+            errEl.classList.remove("hidden");
+          } else {
+            checkAuth();
+          }
+        });
+
+      async function handleLogout() {
+        await supabaseClient.auth.signOut();
+        window.location.reload();
+      }
+
+      async function loadUserProfile() {
+        const { data } = await supabaseClient
+          .from("user_profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .single();
+        if (data) {
+          document.getElementById("cfgBaseSalary").value =
+            data.base_salary || 0;
+          document.getElementById("cfgFixedAllowance").value =
+            data.fixed_allowance || 0;
+          document.getElementById("cfgOtRatePerDay").value =
+            data.ot_rate_per_day || 0;
+          document.getElementById("cfgOtRatePerHour").value =
+            data.default_ot_hours_per_day || 0;
+          document.getElementById("cfgInitialSavings").value =
+            data.initial_savings || 0;
+          calculateSalaryEngine();
+        }
+      }
+
+      async function saveSalaryMaster() {
+        const base_salary =
+          parseFloat(document.getElementById("cfgBaseSalary").value) || 0;
+        const fixed_allowance =
+          parseFloat(document.getElementById("cfgFixedAllowance").value) || 0;
+        const ot_rate_per_day =
+          parseFloat(document.getElementById("cfgOtRatePerDay").value) || 0;
+        const default_ot_hours_per_day =
+          parseFloat(document.getElementById("cfgOtRatePerHour").value) || 0;
+
+        const { error } = await supabaseClient
+          .from("user_profiles")
+          .update({
+            base_salary,
+            fixed_allowance,
+            ot_rate_per_day,
+            default_ot_hours_per_day,
+          })
+          .eq("id", currentUser.id);
+
+        if (!error) {
+          showToast("บันทึกค่าคงที่เงินเดือนและ OT สำเร็จ");
+          await loadUserProfile();
+        } else {
+          showToast(error.message, false);
+        }
+      }
+
+      function calculateSalaryEngine() {
+        const base =
+          parseFloat(document.getElementById("cfgBaseSalary").value) || 0;
+        const allowance =
+          parseFloat(document.getElementById("cfgFixedAllowance").value) || 0;
+        const rateDay =
+          parseFloat(document.getElementById("cfgOtRatePerDay").value) || 0;
+        const rateHour =
+          parseFloat(document.getElementById("cfgOtRatePerHour").value) || 0;
+
+        const days =
+          parseFloat(document.getElementById("inputOtDays").value) || 0;
+        const extraHours =
+          parseFloat(document.getElementById("inputOtExtraHours").value) || 0;
+
+        const otTotal = days * rateDay + extraHours * rateHour;
+        const ssoDeduction =
+          base > 0 ? Math.min(750, Math.round(base * 0.05)) : 0;
+        const grandTotal = Math.max(
+          0,
+          base + allowance + otTotal - ssoDeduction,
+        );
+
+        document.getElementById("calcBaseSummary").textContent =
+          `฿${(base + allowance).toLocaleString()}`;
+        document.getElementById("calcOtSummary").textContent =
+          `+฿${otTotal.toLocaleString()}`;
+        document.getElementById("calcSsoDeduction").textContent =
+          `-฿${ssoDeduction.toLocaleString()}`;
+        document.getElementById("calcGrandTotal").textContent =
+          `฿${grandTotal.toLocaleString()}`;
+      }
+      ["inputOtDays", "inputOtExtraHours"].forEach((id) =>
+        document
+          .getElementById(id)
+          .addEventListener("input", calculateSalaryEngine),
+      );
+
+      async function applySalaryAsIncome() {
+        const grandTotalText = document
+          .getElementById("calcGrandTotal")
+          .textContent.replace(/[฿,]/g, "");
+        const amount = parseFloat(grandTotalText) || 0;
+        if (amount <= 0) return showToast("ยอดเงินต้องมากกว่า 0", false);
+
+        const currentMonthStr = document.getElementById("filterMonth").value;
+        const txDate = `${currentMonthStr}-25`;
+
+        const { error } = await supabaseClient.from("transactions").insert([
+          {
+            user_id: currentUser.id,
+            account_scope: "personal",
+            type: "income",
+            category: "เงินเดือนสุทธิ (หักปกส. 750)",
+            amount,
+            date: txDate,
+          },
+        ]);
+
+        if (!error) {
+          showToast("บันทึกรายได้สุทธิเข้าบัญชีส่วนตัวเรียบร้อย");
+          switchTab("overview");
+          await initDashboard();
+        } else {
+          showToast(error.message, false);
+        }
+      }
+
+      async function saveInitialBalances() {
+        const initial_savings =
+          parseFloat(document.getElementById("cfgInitialSavings").value) || 0;
+        const { error } = await supabaseClient
+          .from("user_profiles")
+          .update({ initial_savings })
+          .eq("id", currentUser.id);
+
+        if (!error) {
+          showToast("บันทึกเงินเก็บตั้งต้นสำเร็จ");
+          await initDashboard();
+        } else {
+          showToast(error.message, false);
+        }
+      }
+
+      // จัดการหนี้สิน (เฉพาะของ User ปัจจุบัน)
+      document
+        .getElementById("addDebtForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const title = document.getElementById("debtTitle").value;
+          const total_amount = parseFloat(
+            document.getElementById("debtAmount").value,
+          );
+
+          const { error } = await supabaseClient.from("debts").insert([
+            {
+              user_id: currentUser.id,
+              title,
+              total_amount,
+              paid_amount: 0,
+            },
+          ]);
+
+          if (!error) {
+            document.getElementById("debtTitle").value = "";
+            document.getElementById("debtAmount").value = "";
+            showToast("เพิ่มรายการหนี้สำเร็จ");
+            await initDashboard();
+          } else {
+            showToast(error.message, false);
+          }
+        });
+
+      async function payDebtItem(debtId, maxRemain) {
+        const payVal = prompt(
+          `กรอกจำนวนเงินที่ต้องการชำระ (คงเหลือ ฿${maxRemain.toLocaleString()}):`,
+        );
+        if (!payVal || isNaN(payVal) || parseFloat(payVal) <= 0) return;
+        const amount = parseFloat(payVal);
+
+        const { data: d } = await supabaseClient
+          .from("debts")
+          .select("*")
+          .eq("id", debtId)
+          .single();
+        if (!d) return;
+
+        const newPaid = Number(d.paid_amount || 0) + amount;
+        const isClosed = newPaid >= Number(d.total_amount);
+
+        await supabaseClient
+          .from("debts")
+          .update({ paid_amount: newPaid, is_closed: isClosed })
+          .eq("id", debtId);
+
+        await supabaseClient.from("transactions").insert([
+          {
+            user_id: currentUser.id,
+            account_scope: "personal",
+            type: "debt_payment",
+            category: `ชำระหนี้: ${d.title}`,
+            amount,
+            date: document.getElementById("txDate").value,
+          },
+        ]);
+
+        showToast("ตัดชำระหนี้เรียบร้อย");
+        await initDashboard();
+      }
+
+      async function deleteDebtItem(id) {
+        if (!confirm("ต้องการลบรายการหนี้นี้ใช่หรือไม่?")) return;
+        await supabaseClient.from("debts").delete().eq("id", id);
+        showToast("ลบรายการหนี้สำเร็จ");
+        await initDashboard();
+      }
+
+      // โหลด Dashboard หลัก (แบ่งแยก Account ชัดเจน แต่แชร์ Shared ร่วมกัน)
+      async function initDashboard() {
+        const selectedMonth = document.getElementById("filterMonth").value;
+
+        // 1. ดึง Profile เงินเก็บตั้งต้นเฉพาะของ User ปัจจุบัน
+        const { data: myProfile } = await supabaseClient
+          .from("user_profiles")
+          .select("*")
+          .eq("id", currentUser.id)
+          .single();
+        let myInitSavings = Number(myProfile?.initial_savings || 0);
+
+        // 2. ดึงรายการหนี้สินเฉพาะของ User ปัจจุบัน
+        const { data: myDebts } = await supabaseClient
+          .from("debts")
+          .select("*")
+          .eq("user_id", currentUser.id);
+        let myTotalDebtRemaining = 0;
+        const debtListEl = document.getElementById("debtList");
+        debtListEl.innerHTML = "";
+
+        (myDebts || []).forEach((d) => {
+          const total = Number(d.total_amount);
+          const paid = Number(d.paid_amount || 0);
+          const remain = Math.max(0, total - paid);
+          myTotalDebtRemaining += remain;
+
+          const card = `
+            <div class="p-4 bg-slate-950/60 rounded-2xl border border-slate-800 flex justify-between items-center text-xs">
+              <div class="space-y-1">
+                <span class="font-bold text-slate-200 text-sm">${d.title}</span>
+                <div class="text-[11px] text-slate-400">ยอดเต็ม ฿${total.toLocaleString()} | ชำระแล้ว ฿${paid.toLocaleString()}</div>
+                <div class="text-[11px] font-semibold text-rose-400">คงเหลือ: ฿${remain.toLocaleString()}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                ${remain > 0 ? `<button onclick="payDebtItem(${d.id},${remain})" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-xl hover:bg-emerald-500/30">ชำระหนี้</button>` : '<span class="text-emerald-400 font-bold px-2 py-1">ชำระครบแล้ว 🎉</span>'}
+                <button onclick="deleteDebtItem(${d.id})" class="text-slate-500 hover:text-rose-400 p-1.5">✕</button>
+              </div>
+            </div>
+          `;
+          debtListEl.insertAdjacentHTML("beforeend", card);
+        });
+
+        // 3. ดึง Transactions ทั้งหมดมาคำนวณแยกส่วนตัวและกองกลาง
+        const { data: allTxs } = await supabaseClient
+          .from("transactions")
+          .select("*");
+        let sharedSavings = 0;
+        let myAddedSavings = 0;
+
+        (allTxs || []).forEach((t) => {
+          const val = Number(t.amount);
+          const isMe = t.user_id === currentUser.id;
+
+          if (t.type === "savings_deposit") {
+            if (t.account_scope === "shared") {
+              sharedSavings += val; // ยอดกองกลางสะสมทั้งหมด (แชร์กันมองเห็น)
+            } else if (isMe) {
+              myAddedSavings += val; // เงินออมส่วนตัวเฉพาะของเรา
+            }
+          }
+        });
+
+        // 4. กรอง Transactions สำหรับแสดงผลตาราง/กราฟ (มองเห็นเฉพาะ: รายการส่วนตัวของเรา + รายการส่วนกลางทั้งหมด)
+        const myVisibleTxs = (allTxs || []).filter((t) => {
+          const isMe = t.user_id === currentUser.id;
+          const isShared = t.account_scope === "shared";
+          return isMe || isShared; // เห็นของตัวเองทั้งหมด + เห็นของส่วนกลางที่ทำร่วมกัน
+        });
+
+        const monthTxs = myVisibleTxs.filter((t) =>
+          (t.date || "").startsWith(selectedMonth),
+        );
+        let monthIncome = 0;
+        let monthExpense = 0;
+        let catExpenses = {};
+
+        const listEl = document.getElementById("txRecentList");
+        listEl.innerHTML = "";
+        document.getElementById("txCountTag").textContent =
+          `${monthTxs.length} รายการ`;
+
+        monthTxs
+          .sort(
+            (a, b) =>
+              new Date(b.date || b.created_at) -
+              new Date(a.date || a.created_at),
+          )
+          .forEach((t) => {
+            const val = Number(t.amount);
+            const isMe = t.user_id === currentUser.id;
+
+            // คำนวณรายรับ/รายจ่ายเฉพาะบัญชีของเรา (+ ส่วนกลางที่เกี่ยวข้อง)
+            if (t.type === "income" && isMe) monthIncome += val;
+            else if (t.type === "expense") {
+              monthExpense += val;
+              catExpenses[t.category] = (catExpenses[t.category] || 0) + val;
+            }
+
+            const scopeBadge =
+              t.account_scope === "shared"
+                ? "🏠 ส่วนกลาง"
+                : isMe
+                  ? "👤 ส่วนตัว (ฉัน)"
+                  : "👤 ส่วนตัว (แฟน)";
+            const typeColor =
+              t.type === "expense"
+                ? "text-rose-400"
+                : t.type === "income"
+                  ? "text-emerald-400"
+                  : "text-sky-400";
+
+            const row = `
+            <div class="flex justify-between items-center p-3 bg-slate-950/40 rounded-xl border border-slate-800/60 text-xs">
+              <div class="space-y-0.5">
+                <div class="flex items-center gap-2">
+                  <span class="font-medium text-slate-200">${t.category}</span>
+                  <span class="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full">${scopeBadge}</span>
+                </div>
+                <div class="text-[10px] text-slate-500">${t.date}</div>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="font-bold ${typeColor}">฿${val.toLocaleString()}</span>
+                ${isMe ? `<button onclick="deleteTx(${t.id})" class="text-slate-600 hover:text-rose-400 text-xs" title="ลบ">✕</button>` : ""}
+              </div>
+            </div>
+          `;
+            listEl.insertAdjacentHTML("beforeend", row);
+          });
+
+        // สรุปยอดเฉพาะของ User นี้
+        const myTotalNetSavings = myInitSavings + myAddedSavings;
+        const myNetPosition = myTotalNetSavings - myTotalDebtRemaining;
+
+        document.getElementById("cardNetSavings").textContent =
+          `฿${myTotalNetSavings.toLocaleString()}`;
+        document.getElementById("cardRemainingDebt").textContent =
+          `฿${myTotalDebtRemaining.toLocaleString()}`;
+        document.getElementById("cardNetPosition").textContent =
+          `฿${myNetPosition.toLocaleString()}`;
+        document.getElementById("cardSharedSavings").textContent =
+          `฿${sharedSavings.toLocaleString()}`;
+
+        document.getElementById("cardMonthIncome").textContent =
+          `฿${monthIncome.toLocaleString()}`;
+        document.getElementById("cardMonthExpense").textContent =
+          `฿${monthExpense.toLocaleString()}`;
+        document.getElementById("cardMonthBalance").textContent =
+          `฿${(monthIncome - monthExpense).toLocaleString()}`;
+
+        renderCharts(monthIncome, monthExpense, catExpenses);
+      }
+
+      async function deleteTx(id) {
+        if (!confirm("ยืนยันลบรายการนี้ใช่หรือไม่?")) return;
+        await supabaseClient.from("transactions").delete().eq("id", id);
+        showToast("ลบรายการเรียบร้อย");
+        await initDashboard();
+      }
+
+      function renderCharts(income, expense, catExpenses) {
+        const ctxBar = document
+          .getElementById("incomeVsExpenseChart")
+          .getContext("2d");
+        if (incomeVsExpenseChart) incomeVsExpenseChart.destroy();
+        incomeVsExpenseChart = new Chart(ctxBar, {
+          type: "bar",
+          data: {
+            labels: ["รายรับ", "รายจ่าย"],
+            datasets: [
+              {
+                data: [income, expense],
+                backgroundColor: ["#10b981", "#f43f5e"],
+                borderRadius: 8,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { grid: { color: "#1e293b" }, ticks: { color: "#94a3b8" } },
+              x: { grid: { display: false }, ticks: { color: "#94a3b8" } },
+            },
+          },
+        });
+
+        const ctxPie = document
+          .getElementById("categoryChart")
+          .getContext("2d");
+        if (categoryChart) categoryChart.destroy();
+        const labels = Object.keys(catExpenses);
+        const data = Object.values(catExpenses);
+        categoryChart = new Chart(ctxPie, {
+          type: "doughnut",
+          data: {
+            labels: labels.length ? labels : ["ไม่มีรายจ่าย"],
+            datasets: [
+              {
+                data: data.length ? data : [1],
+                backgroundColor: [
+                  "#f43f5e",
+                  "#38bdf8",
+                  "#fbbf24",
+                  "#a855f7",
+                  "#34d399",
+                  "#64748b",
+                ],
+                borderWidth: 0,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+          },
+        });
+      }
+
+      document
+        .getElementById("txForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const btn = document.getElementById("btnSubmitTx");
+          btn.disabled = true;
+
+          const date = document.getElementById("txDate").value;
+          const account_scope = document.getElementById("txScope").value;
+          const type = document.getElementById("txType").value;
+          const category = document.getElementById("txCategory").value;
+          const amount = parseFloat(document.getElementById("txAmount").value);
+
+          const { error } = await supabaseClient.from("transactions").insert([
+            {
+              user_id: currentUser.id,
+              date,
+              account_scope,
+              type,
+              category,
+              amount,
+            },
+          ]);
+
+          btn.disabled = false;
+          if (!error) {
+            document.getElementById("txCategory").value = "";
+            document.getElementById("txAmount").value = "";
+            showToast("บันทึกรายการเรียบร้อย");
+            switchTab("overview");
+            await initDashboard();
+          } else {
+            showToast(error.message, false);
+          }
+        });
+
+      checkAuth();
+    </script>
+  </body>
+</html>
